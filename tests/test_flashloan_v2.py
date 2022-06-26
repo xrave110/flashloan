@@ -3,18 +3,30 @@
 # i.e. one that does not implement any custom logic.
 
 # The initial transfer should be removed prior to testing your final implementation.
+from brownie import interface
 
 
-def test_eth_flashloan(accounts, WETH, flashloan_v2):
+def approve_erc20(amount, to, erc20_address, account, uniRouter):
+    tx_hash = None
+    print("Approving ERC20...")
+    erc20 = interface.IERC20(erc20_address)
+    allowance = erc20.allowance(account, uniRouter.address)
+    if allowance > amount:
+        print("You have already allowance {} ERC20 tokens!".format(allowance))
+    else:
+        tx_hash = erc20.approve(to, amount, {"from": account})
+        print("Approved!")
+        tx_hash.wait(1)
+    return tx_hash
+
+
+def test_eth_flashloan(WETH, DAI, uniRouter):
     """
     Test a flashloan that borrows Ethereum.
     """
 
     # transfer ether to the flashloan contract
-    accounts[0].transfer(WETH, "2 ether")
-    WETH.transfer(flashloan_v2, "2 ether", {"from": accounts[0]})
-
-    flashloan_v2.flashloan(WETH, {"from": accounts[0]})
+    pass
 
 
 def test_dai_flashloan(Contract, accounts, DAI, flashloan_v2):

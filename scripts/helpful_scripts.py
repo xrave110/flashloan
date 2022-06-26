@@ -1,12 +1,16 @@
 from brownie import accounts, network, config, interface
 from web3 import Web3
 
+# import pdb
+
+# pdb.set_trace()
 NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["hardhat", "development", "ganache"]
 LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
     "mainnet-fork",
     "binance-fork",
     "matic-fork",
 ]
+
 
 price_feed_mapping = {
     "mainnet-fork": {
@@ -44,12 +48,11 @@ def approve_erc20(
     to,
     erc20_address,
     account,
-    spender=config["networks"][network.show_active()]["uniswap_router_v2"],
 ):
     tx_hash = None
     print("Approving ERC20...")
     erc20 = interface.IERC20(erc20_address)
-    allowance = erc20.allowance(account, spender)
+    allowance = erc20.allowance(account, to)
     if allowance > amount:
         print("You have already allowance {} ERC20 tokens!".format(allowance))
     else:
@@ -59,9 +62,7 @@ def approve_erc20(
     return tx_hash
 
 
-def get_asset_price(
-    address_price_feed=None,
-):
+def get_asset_price(address_price_feed=None, reverted=False):
     # For mainnet we can just do:
     # return Contract(f"{pair}.data.eth").latestAnswer() / 1e8
     address_price_feed = (
@@ -71,5 +72,5 @@ def get_asset_price(
     )
     dai_eth_price_feed = interface.AggregatorV3Interface(address_price_feed)
     latest_price = Web3.fromWei(dai_eth_price_feed.latestRoundData()[1], "ether")
-    print(f"The DAI/ETH price is {latest_price}")
+    print(f"The DAI/ETH price is {1/latest_price}")
     return float(latest_price)

@@ -1,4 +1,15 @@
 import pytest
+from scripts.run_flash_loan_v2 import run_flashloan
+from scripts.get_weth import get_weth
+from scripts.run_routerv2 import Routerv2Api
+from brownie import config, network, web3, accounts
+
+NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["hardhat", "development", "ganache"]
+LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
+    "mainnet-fork",
+    "binance-fork",
+    "matic-fork",
+]
 
 
 @pytest.fixture(autouse=True)
@@ -9,6 +20,34 @@ def setup(fn_isolation):
     This ensures that each test runs against the same base environment.
     """
     pass
+
+
+@pytest.fixture(scope="module")
+def flashloan_v2():
+    yield run_flashloan()
+
+
+@pytest.fixture(scope="module")
+def account():
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        return accounts[0]
+
+    else:
+        return accounts.add(config["wallets"]["from_key"])
+
+
+@pytest.fixture(scope="module")
+def uniRouter():
+    return Routerv2Api(
+        amount_to_swap=web3.toWei(0.1, "ether"), dex_type="uniswap_router_v2"
+    )
+
+
+@pytest.fixture(scope="module")
+def sushiRouter():
+    return Routerv2Api(
+        amount_to_swap=web3.toWei(0.1, "ether"), dex_type="sushiswap_router_v2"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -25,15 +64,6 @@ def aave_lending_pool_v2(Contract):
     Yield a `Contract` object for the Aave lending pool address provider.
     """
     yield Contract("0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5")
-
-
-@pytest.fixture(scope="module")
-def flashloan_v2(FlashloanV2, aave_lending_pool_v2, accounts):
-    """
-    Deploy a `Flashloan` contract from `web3.eth.accounts[0]` and yields the
-    generated object.
-    """
-    yield FlashloanV2.deploy(aave_lending_pool_v2, {"from": accounts[0]})
 
 
 # Mainnet reserve token fixtures - addresses are taken from
@@ -128,3 +158,8 @@ def WBTC(Contract):
 @pytest.fixture(scope="module")
 def ZRX(Contract):
     yield Contract("0xE41d2489571d322189246DaFA5ebDe1F4699F498")
+
+
+@pytest.fixture(scope="module")
+def dai_eth_price_feed(Contract):
+    yield Contract("0xaEA2808407B7319A31A383B6F8B60f04BCa23cE2")

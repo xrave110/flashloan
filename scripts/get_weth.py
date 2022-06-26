@@ -6,12 +6,13 @@ def main():
     get_weth()
 
 
-def get_weth():
+def get_weth(amount=0.1):
     """
     Mints WETH by depositing ETH
     """
     account = get_account()
     weth = interface.WethInterface(config["networks"][network.show_active()]["weth"])
-    tx = weth.deposit({"from": account, "value": 0.1 * 10 ** 18})
+    tx = weth.deposit({"from": account, "value": amount * 10 ** 18})
     tx.wait(1)
-    print("Received 0.1 WETH")
+    print("Received {} WETH".format(amount))
+    return weth
