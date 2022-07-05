@@ -2,6 +2,8 @@ import pytest
 from brownie import config, network, web3, accounts, interface
 from tests.rounter_v2_api import Routerv2Api
 
+# import pdb
+
 NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["hardhat", "development", "ganache"]
 LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
     "mainnet-fork",
@@ -15,16 +17,22 @@ def check_local_blockchain_envs():
         pytest.skip()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def main_account():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        return accounts[0]
+        print(
+            "main_account: {} Type: {}".format(
+                accounts[0].address, type(accounts[0].address)
+            )
+        )
+        return accounts[0].address
 
     else:
-        return accounts.add(config["wallets"]["from_key"])
+        account = accounts.add(config["wallets"]["from_key"])
+        return account.address
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module")
 def account_1():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         return accounts[1]
@@ -55,22 +63,20 @@ def setup(fn_isolation):
 
 
 @pytest.fixture(scope="module")
-def uniRouter():
-    router_v2 = config["networks"][network.show_active()]["uniswap_router_v2"]
+def uniRouter(main_account):
+    router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
     yield Routerv2Api(
-        amount_to_swap=web3.toWei(0.1, "ether"),
         account=main_account,
-        router_v2=interface.IUniswapV2Router02(router_v2),
+        router_v2=interface.IUniswapV2Router02(router_v2_address),
     )
 
 
 @pytest.fixture(scope="module")
-def sushiRouter():
-    router_v2 = config["networks"][network.show_active()]["sushiswap_router_v2"]
+def sushiRouter(main_account):
+    router_v2_address = config["networks"][network.show_active()]["sushiswap_router_v2"]
     yield Routerv2Api(
-        amount_to_swap=web3.toWei(0.1, "ether"),
         account=main_account,
-        router_v2=interface.IUniswapV2Router02(router_v2),
+        router_v2=interface.IUniswapV2Router02(router_v2_address),
     )
 
 
@@ -94,19 +100,34 @@ def aave_lending_pool_v2(Contract):
 # https://docs.aave.com/developers/v/1.0/deployed-contracts/deployed-contract-instances#reserves-assets
 
 
-# @pytest.fixture(scope="module")
-# def WETH(Contract):
-#     yield Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
+@pytest.fixture(scope="module")
+def DAI_WETH_PRICE_FEED():
+    yield config["networks"][network.show_active()]["dai_eth_price_feed"]
 
+
+@pytest.fixture(scope="module")
+def WETH():
+    yield interface.WethInterface(config["networks"][network.show_active()]["weth"])
+
+
+@pytest.fixture(scope="module")
+def get_weth(WETH, main_account):
+    amount = 0.1
+    initial_balance = web3.fromWei(WETH.balanceOf(main_account), "ether")
+    if initial_balance < amount:
+        tx = WETH.deposit({"from": main_account, "value": amount * 10 ** 18})
+        tx.wait(1)
+        print("Received {} WETH".format(amount))
+        return WETH.balanceOf(main_account)
 
 # @pytest.fixture(scope="module")
 # def ETH():
 #     yield "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 
 
-# @pytest.fixture(scope="module")
-# def DAI(Contract):
-#     yield Contract("0x6B175474E89094C44Da98b954EedeAC495271d0F")
+@pytest.fixture(scope="module")
+def DAI():
+    yield interface.IERC20(config["networks"][network.show_active()]["dai"])
 
 
 # @pytest.fixture(scope="module")

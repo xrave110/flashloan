@@ -3,30 +3,54 @@
 # i.e. one that does not implement any custom logic.
 
 # The initial transfer should be removed prior to testing your final implementation.
-from brownie import interface
+from brownie import interface, web3
+import pdb
+
+from tests.conftest import main_account
 
 
-def approve_erc20(amount, to, erc20_address, account, uniRouter):
-    tx_hash = None
-    print("Approving ERC20...")
-    erc20 = interface.IERC20(erc20_address)
-    allowance = erc20.allowance(account, uniRouter.address)
-    if allowance > amount:
-        print("You have already allowance {} ERC20 tokens!".format(allowance))
-    else:
-        tx_hash = erc20.approve(to, amount, {"from": account})
-        print("Approved!")
-        tx_hash.wait(1)
-    return tx_hash
+def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
+    initial_dai_balance = DAI.balanceOf(uniRouter.account)
+    amount = web3.toWei(0.05, "ether")
+    uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
+    price = uniRouter.get_asset_price(DAI_WETH_PRICE_FEED)
+    uniRouter.swap(WETH.address, DAI.address, price, amount)
+    final_dai_balance = DAI.balanceOf(uniRouter.account)
+    print(
+        "{} < {}".format(
+            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+        )
+    )
+
+    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
 
 
-def test_eth_flashloan(WETH, DAI, uniRouter):
+def test_provide_liquidity_eth_dai(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
     """
     Test a flashloan that borrows Ethereum.
     """
+    initial_dai_balance = DAI.balanceOf(uniRouter.account)
+    amount = web3.toWei(0.05, "ether")
+    price = uniRouter.get_asset_price(DAI_WETH_PRICE_FEED)
+    print(1 / price)
+    required_dai_balance = price * amount
 
-    # transfer ether to the flashloan contract
-    pass
+    # to be improved
+    if initial_dai_balance < required_dai_balance:
+        uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
+        uniRouter.swap(WETH.address, DAI.address, price, amount)
+
+    initial_weth_balance = WETH.balanceOf(uniRouter.account)
+    if initial_weth_balance < amount:
+        tx = WETH.deposit({"from": uniRouter.account, "value": amount * 10 ** 18})
+        tx.wait(1)
+
+    initial_pair_balance = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
+    print("Before: {}".format(initial_pair_balance))
+    uniRouter.addLiquidity(DAI.address, WETH.address, amount, price)
+    final_pair_balance = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
+    print("After: {}".format(final_pair_balance))
+    assert final_pair_balance > initial_pair_balance
 
 
 def test_dai_flashloan(Contract, accounts, DAI, flashloan_v2):
