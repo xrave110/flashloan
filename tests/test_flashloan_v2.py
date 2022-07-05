@@ -4,12 +4,12 @@
 
 # The initial transfer should be removed prior to testing your final implementation.
 from brownie import interface, web3
-import pdb
-
-from tests.conftest import main_account
+import pytest
 
 
 def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
+    """"""
+    pytest.skip()
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
     uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
@@ -25,10 +25,9 @@ def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
     assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
 
 
-def test_provide_liquidity_eth_dai(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
-    """
-    Test a flashloan that borrows Ethereum.
-    """
+@pytest.fixture()
+def test_provide_eth_dai_liquidity(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
+    """"""
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
     price = uniRouter.get_asset_price(DAI_WETH_PRICE_FEED)
@@ -45,21 +44,47 @@ def test_provide_liquidity_eth_dai(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uni
         tx = WETH.deposit({"from": uniRouter.account, "value": amount * 10 ** 18})
         tx.wait(1)
 
-    initial_pair_balance = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
-    print("Before: {}".format(initial_pair_balance))
+    initial_pair_liquidity = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
+    initial_pair_balance = uniRouter.get_pair_contract(
+        DAI.address, WETH.address
+    ).balanceOf(uniRouter.account)
+    print("Before: {}".format(initial_pair_liquidity))
     uniRouter.addLiquidity(DAI.address, WETH.address, amount, price)
-    final_pair_balance = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
-    print("After: {}".format(final_pair_balance))
+    final_pair_liquidity = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
+    final_pair_balance = uniRouter.get_pair_contract(
+        DAI.address, WETH.address
+    ).balanceOf(uniRouter.account)
+    print("After: {}".format(final_pair_liquidity))
+    assert final_pair_liquidity > initial_pair_liquidity
     assert final_pair_balance > initial_pair_balance
 
 
-def test_dai_flashloan(Contract, accounts, DAI, flashloan_v2):
+# test_provide_eth_dai_liquidity added for isolation
+def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liquidity):
+    """"""
+
+    pair_contract = uniRouter.get_pair_contract(DAI.address, WETH.address)
+    initial_pair_balance = pair_contract.balanceOf(uniRouter.account)
+
+    if initial_pair_balance > 0:
+        uniRouter.remove_liquidity(DAI.address, WETH.address)
+        final_pair_balance = pair_contract.balanceOf(uniRouter.account)
+        assert initial_pair_balance > final_pair_balance
+    else:
+        assert False
+
+
+def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj):
+    uni_sushi_arbitrage_obj.perform_arbitrage(web3.toWei(20, "ether"))
+
+
+def test_dai_flashloan(Contract, accounts, DAI):
     """
     Test a flashloan that borrows DAI.
 
     To use a different asset, swap DAI with any of the fixture names in `tests/conftest.py`
     """
-
+    pytest.skip()
     # purchase DAI on uniswap
     uniswap_dai = Contract.from_explorer("0x2a1530C4C41db0B0b2bB646CB5Eb1A67b7158667")
     uniswap_dai.ethToTokenSwapInput(
@@ -73,11 +98,11 @@ def test_dai_flashloan(Contract, accounts, DAI, flashloan_v2):
     flashloan_v2.flashloan(DAI, {"from": accounts[0]})
 
 
-def test_batch_eth_dai_flashloan(Contract, accounts, DAI, WETH, flashloan_v2):
+def test_batch_eth_dai_flashloan(Contract, accounts, DAI, WETH):
     """
     Test a flashloan that borrows WETH and DAI.
     """
-
+    pytest.skip()
     # purchase DAI on uniswap
     uniswap_dai = Contract.from_explorer("0x2a1530C4C41db0B0b2bB646CB5Eb1A67b7158667")
     uniswap_dai.ethToTokenSwapInput(

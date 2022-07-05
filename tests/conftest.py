@@ -1,6 +1,7 @@
 import pytest
 from brownie import config, network, web3, accounts, interface
 from tests.rounter_v2_api import Routerv2Api
+from tests.arbitrage_api import Arbitrage
 
 # import pdb
 
@@ -120,6 +121,7 @@ def get_weth(WETH, main_account):
         print("Received {} WETH".format(amount))
         return WETH.balanceOf(main_account)
 
+
 # @pytest.fixture(scope="module")
 # def ETH():
 #     yield "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -128,6 +130,16 @@ def get_weth(WETH, main_account):
 @pytest.fixture(scope="module")
 def DAI():
     yield interface.IERC20(config["networks"][network.show_active()]["dai"])
+
+
+@pytest.fixture(scope="module")
+def uni_sushi_arbitrage_obj(
+    main_account, uniRouter, sushiRouter, WETH, DAI, DAI_WETH_PRICE_FEED, get_weth
+):
+    uni_sushi_arbitrage_obj = Arbitrage(
+        uniRouter, sushiRouter, DAI.address, WETH.address, DAI_WETH_PRICE_FEED
+    )
+    yield uni_sushi_arbitrage_obj
 
 
 # @pytest.fixture(scope="module")

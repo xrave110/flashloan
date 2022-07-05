@@ -1,4 +1,5 @@
 from brownie import interface, web3, chain
+from sympy import li
 
 
 class Routerv2Api:
@@ -22,8 +23,8 @@ class Routerv2Api:
         return tx_hash
 
     def get_asset_price(self, address_price_feed, reverted=False):
-        dai_eth_price_feed = interface.AggregatorV3Interface(address_price_feed)
-        latest_price = web3.fromWei(dai_eth_price_feed.latestRoundData()[1], "ether")
+        price_feed = interface.AggregatorV3Interface(address_price_feed)
+        latest_price = web3.fromWei(price_feed.latestRoundData()[1], "ether")
         print(latest_price)
         return float(latest_price)
 
@@ -86,23 +87,22 @@ class Routerv2Api:
         return pair.balanceOf(self.account)
 
     def remove_liquidity(self, address_token_a, address_token_b):
-        self.liquidityTokens = self.get_pair_liquidity(address_token_a, address_token_b)
+        liquidityTokens = self.get_pair_liquidity(address_token_a, address_token_b)
         timestamp = chain[web3.eth.get_block_number()]["timestamp"] + 120
-        pair = self.getPair(address_token_a, address_token_b)
-        self.approve_erc20(
-            self.liquidityTokens, self.router_v2.address, pair.address, self.account
-        )
+        pair = self.get_pair_contract(address_token_a, address_token_b)
+        self.approve_erc20(liquidityTokens, self.router_v2.address, pair.address)
         self.router_v2.removeLiquidity(
             address_token_a,
             address_token_b,
-            self.liquidityTokens,
+            liquidityTokens,
             0,
             0,
             self.account,
             timestamp,
             {"from": self.account},
         )
-        self.liquidityTokens = self.get_pair_liquidity(address_token_a, address_token_b)
+        liquidityTokens = self.get_pair_liquidity(address_token_a, address_token_b)
+        return liquidityTokens
 
     def addLiquidity(
         self,
