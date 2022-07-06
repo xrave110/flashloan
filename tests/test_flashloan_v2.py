@@ -26,6 +26,24 @@ def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
 
 
 @pytest.fixture()
+def test_eth_dai_swap_1(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth_1, uniRouter_1):
+    """"""
+    initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
+    amount = web3.toWei(80, "ether")
+    uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
+    price = uniRouter_1.get_asset_price(DAI_WETH_PRICE_FEED)
+    uniRouter_1.swap(WETH.address, DAI.address, price, amount)
+    final_dai_balance = DAI.balanceOf(uniRouter_1.account)
+    print(
+        "{} < {}".format(
+            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+        )
+    )
+
+    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+
+
+@pytest.fixture()
 def test_provide_eth_dai_liquidity(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
     """"""
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
@@ -74,8 +92,8 @@ def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liq
         assert False
 
 
-def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj):
-    uni_sushi_arbitrage_obj.perform_arbitrage(web3.toWei(20, "ether"))
+def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, test_eth_dai_swap_1):
+    uni_sushi_arbitrage_obj.perform_arbitrage(web3.toWei(10, "ether"))
 
 
 def test_dai_flashloan(Contract, accounts, DAI):

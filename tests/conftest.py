@@ -113,13 +113,33 @@ def WETH():
 
 @pytest.fixture(scope="module")
 def get_weth(WETH, main_account):
-    amount = 0.1
+    amount = 10
     initial_balance = web3.fromWei(WETH.balanceOf(main_account), "ether")
     if initial_balance < amount:
-        tx = WETH.deposit({"from": main_account, "value": amount * 10 ** 18})
+        tx = WETH.deposit({"from": main_account, "value": amount * (10 ** 18)})
         tx.wait(1)
-        print("Received {} WETH".format(amount))
+        print("Received {} WETH to account {}".format(amount, main_account))
         return WETH.balanceOf(main_account)
+
+
+@pytest.fixture(scope="module")
+def uniRouter_1(account_1):
+    router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
+    yield Routerv2Api(
+        account=account_1,
+        router_v2=interface.IUniswapV2Router02(router_v2_address),
+    )
+
+
+@pytest.fixture(scope="module")
+def get_weth_1(WETH, account_1):
+    amount = 80
+    initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
+    if initial_balance < amount:
+        tx = WETH.deposit({"from": account_1, "value": amount * (10 ** 18)})
+        tx.wait(1)
+        print("Received {} WETH to account {}".format(amount, account_1))
+        return WETH.balanceOf(account_1)
 
 
 # @pytest.fixture(scope="module")

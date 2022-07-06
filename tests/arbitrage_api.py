@@ -1,3 +1,4 @@
+from audioop import reverse
 from brownie import web3, interface
 
 
@@ -14,8 +15,8 @@ class Arbitrage:
         self.router_dex2 = router_dex2
         self.tokenA_address = tokenA_address
         self.tokenB_address = tokenB_address
-        self.tokenA_symbol = interface.IERC20(tokenA_address)
-        self.tokenB_symbol = interface.IERC20(tokenB_address)
+        self.tokenA_symbol = interface.IERC20(tokenA_address).symbol()
+        self.tokenB_symbol = interface.IERC20(tokenB_address).symbol()
         self.address_price_feed = address_price_feed
 
     def check_pools(self):
@@ -97,15 +98,24 @@ class Arbitrage:
 
         print("Gas price is {}".format(web3.eth.generate_gas_price()))
         # print("Gas limit is {}".format(web3.eth.estimate_gas()))
-        if dex1_quote < dex2_quote:
-            print("Dex1 has cheaper {}".format(self.tokenA_symbol))
-            self.buy_cheap(
-                amount, self.router_dex1, self.router_dex2, dex1_quote, dex2_quote
+        if dex1_quote > dex2_quote:
+            print(
+                "Dex1 has more expensive {} (cheaper {})".format(
+                    self.tokenB_symbol, self.tokenA_symbol
+                )
             )
-        else:
-            print("Dex2 has cheaper {}".format(self.tokenA_symbol))
             self.buy_cheap(
-                amount, self.router_dex2, self.router_dex2, dex2_quote, dex1_quote
+                amount, self.router_dex1, self.router_dex2, dex2_quote, dex1_quote
+            )
+
+        else:
+            print(
+                "Dex2 has more expensive {} (cheaper {})".format(
+                    self.tokenB_symbol, self.tokenA_symbol
+                )
+            )
+            self.buy_cheap(
+                amount, self.router_dex2, self.router_dex1, dex1_quote, dex2_quote
             )
 
     def estimate_fees(self, amount, cheap_quote):
@@ -128,7 +138,7 @@ class Arbitrage:
 
         # if cheaper_quote + float(fees) < expensive_quote:
         print("Cheaper: {}, more expensive: {}".format(cheap_quote, expensive_quote))
-        amount_to_swap = amount * cheap_quote
+        amount_to_swap = amount
         if cheap_quote < expensive_quote:
             cheapDex.approve_erc20(
                 amount_to_swap,
@@ -145,9 +155,14 @@ class Arbitrage:
             #         amount_to_swap,
             #     )
             # )
+
             print("Swapping {} to {}...".format(self.tokenB_symbol, self.tokenA_symbol))
             cheapDex.swap(
-                self.tokenB_address, self.tokenA_address, cheap_quote, amount_to_swap
+                self.tokenB_address,
+                self.tokenA_address,
+                cheap_quote,
+                amount_to_swap,
+                reverse_feed=True,
             )
             print(
                 ">>>>>II. After {} swapped with {}".format(
@@ -155,9 +170,11 @@ class Arbitrage:
                 )
             )
             self.get_current_balances()
-
+            amount_to_swap = amount * expensive_quote * 0.98
+            # - float(web3.toWei(float(fees) * 1.3, "ether")
+            # )  # (fees * 1.3) temporary assumption
             expensiveDex.approve_erc20(
-                expensiveDex.amount_to_swap,
+                amount_to_swap,
                 expensiveDex.router_v2,
                 self.tokenA_address,
             )
@@ -165,9 +182,9 @@ class Arbitrage:
             expensiveDex.swap(
                 self.tokenA_address,
                 self.tokenB_address,
-                cheap_quote,
+                expensive_quote,
                 amount_to_swap,
-                reverse_feed=True,
+                reverse_feed=False,
             )
             print(
                 ">>>>>III. After {} swapped with {}".format(
