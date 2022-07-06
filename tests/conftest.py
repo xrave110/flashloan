@@ -73,6 +73,15 @@ def uniRouter(main_account):
 
 
 @pytest.fixture(scope="module")
+def uniRouter_1(account_1):
+    router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
+    yield Routerv2Api(
+        account=account_1,
+        router_v2=interface.IUniswapV2Router02(router_v2_address),
+    )
+
+
+@pytest.fixture(scope="module")
 def sushiRouter(main_account):
     router_v2_address = config["networks"][network.show_active()]["sushiswap_router_v2"]
     yield Routerv2Api(
@@ -102,13 +111,11 @@ def aave_lending_pool_v2(Contract):
 
 
 @pytest.fixture(scope="module")
-def DAI_WETH_PRICE_FEED():
-    yield config["networks"][network.show_active()]["dai_eth_price_feed"]
-
-
-@pytest.fixture(scope="module")
-def WETH():
-    yield interface.WethInterface(config["networks"][network.show_active()]["weth"])
+def PRICE_FEEDS():
+    yield {
+        "DAI_WETH": config["networks"][network.show_active()]["dai_eth_price_feed"],
+        "ETH_USD": config["networks"][network.show_active()]["eth_usd_price_feed"],
+    }
 
 
 @pytest.fixture(scope="module")
@@ -123,15 +130,6 @@ def get_weth(WETH, main_account):
 
 
 @pytest.fixture(scope="module")
-def uniRouter_1(account_1):
-    router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
-    yield Routerv2Api(
-        account=account_1,
-        router_v2=interface.IUniswapV2Router02(router_v2_address),
-    )
-
-
-@pytest.fixture(scope="module")
 def get_weth_1(WETH, account_1):
     amount = 80
     initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
@@ -142,9 +140,34 @@ def get_weth_1(WETH, account_1):
         return WETH.balanceOf(account_1)
 
 
-# @pytest.fixture(scope="module")
-# def ETH():
-#     yield "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+@pytest.fixture()
+def make_arbitrage_opportunity(WETH, DAI, PRICE_FEEDS, get_weth_1, uniRouter_1):
+    """"""
+    initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
+    amount = web3.toWei(80, "ether")
+    uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
+    price = uniRouter_1.get_asset_price(PRICE_FEEDS["DAI_WETH"])
+    uniRouter_1.swap(WETH.address, DAI.address, price, amount)
+    final_dai_balance = DAI.balanceOf(uniRouter_1.account)
+    print(
+        "{} < {}".format(
+            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+        )
+    )
+    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+
+
+@pytest.fixture(scope="module")
+def uni_sushi_arbitrage_obj(uniRouter, sushiRouter, WETH, DAI, PRICE_FEEDS, get_weth):
+    uni_sushi_arbitrage_obj = Arbitrage(
+        uniRouter,
+        sushiRouter,
+        WETH.address,
+        DAI.address,
+        PRICE_FEEDS["DAI_WETH"],
+        PRICE_FEEDS["ETH_USD"],
+    )
+    yield uni_sushi_arbitrage_obj
 
 
 @pytest.fixture(scope="module")
@@ -153,13 +176,8 @@ def DAI():
 
 
 @pytest.fixture(scope="module")
-def uni_sushi_arbitrage_obj(
-    main_account, uniRouter, sushiRouter, WETH, DAI, DAI_WETH_PRICE_FEED, get_weth
-):
-    uni_sushi_arbitrage_obj = Arbitrage(
-        uniRouter, sushiRouter, DAI.address, WETH.address, DAI_WETH_PRICE_FEED
-    )
-    yield uni_sushi_arbitrage_obj
+def WETH():
+    yield interface.WethInterface(config["networks"][network.show_active()]["weth"])
 
 
 # @pytest.fixture(scope="module")

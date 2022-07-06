@@ -7,13 +7,13 @@ from brownie import interface, web3
 import pytest
 
 
-def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
+def test_eth_dai_swap(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
     """"""
     pytest.skip()
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
     uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
-    price = uniRouter.get_asset_price(DAI_WETH_PRICE_FEED)
+    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
     uniRouter.swap(WETH.address, DAI.address, price, amount)
     final_dai_balance = DAI.balanceOf(uniRouter.account)
     print(
@@ -26,29 +26,11 @@ def test_eth_dai_swap(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
 
 
 @pytest.fixture()
-def test_eth_dai_swap_1(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth_1, uniRouter_1):
-    """"""
-    initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
-    amount = web3.toWei(80, "ether")
-    uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
-    price = uniRouter_1.get_asset_price(DAI_WETH_PRICE_FEED)
-    uniRouter_1.swap(WETH.address, DAI.address, price, amount)
-    final_dai_balance = DAI.balanceOf(uniRouter_1.account)
-    print(
-        "{} < {}".format(
-            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
-        )
-    )
-
-    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
-
-
-@pytest.fixture()
-def test_provide_eth_dai_liquidity(WETH, DAI, DAI_WETH_PRICE_FEED, get_weth, uniRouter):
+def test_provide_eth_dai_liquidity(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
     """"""
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
-    price = uniRouter.get_asset_price(DAI_WETH_PRICE_FEED)
+    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
     print(1 / price)
     required_dai_balance = price * amount
 
@@ -92,8 +74,15 @@ def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liq
         assert False
 
 
-def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, test_eth_dai_swap_1):
-    uni_sushi_arbitrage_obj.perform_arbitrage(web3.toWei(10, "ether"))
+def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, make_arbitrage_opportunity):
+    initial_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
+    initial_usd_balance = uni_sushi_arbitrage_obj.get_current_balances()
+    final_usd_balance = uni_sushi_arbitrage_obj.perform_arbitrage(
+        web3.toWei(10, "ether")
+    )
+    final_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
+    assert initial_usd_balance < final_usd_balance
+    assert initial_eth_balance < final_eth_balance
 
 
 def test_dai_flashloan(Contract, accounts, DAI):
