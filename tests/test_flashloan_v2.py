@@ -5,6 +5,7 @@
 # The initial transfer should be removed prior to testing your final implementation.
 from brownie import interface, web3
 import pytest
+import pdb
 
 
 def test_eth_dai_swap(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
@@ -74,7 +75,7 @@ def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liq
         assert False
 
 
-def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, make_arbitrage_opportunity):
+def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, create_arbitrage_opportunity):
     initial_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
     initial_usd_balance = uni_sushi_arbitrage_obj.get_current_balances()
     final_usd_balance = uni_sushi_arbitrage_obj.perform_arbitrage(
@@ -125,3 +126,73 @@ def test_batch_eth_dai_flashloan(Contract, accounts, DAI, WETH):
     WETH.transfer(flashloan_v2, "2 ether", {"from": accounts[0]})
 
     flashloan_v2.flashloan([WETH, DAI], ["1 ether", "1 ether"], {"from": accounts[0]})
+
+
+def test_solidity_swap(WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol):
+    initial_dai_balance = DAI.balanceOf(uniRouter.account)
+    amount = web3.toWei(0.05, "ether")
+    allowance = WETH.allowance(uniRouter.account, router_sol.address)
+    print(initial_dai_balance)
+    if allowance < amount:
+        WETH.approve(router_sol.address, amount, {"from": uniRouter.account})
+    router_sol.swapTokens(
+        WETH.address,
+        DAI.address,
+        uniRouter.router_v2.address,
+        amount,
+        uniRouter.account,
+        {"from": uniRouter.account},
+    )
+    final_dai_balance = DAI.balanceOf(uniRouter.account)
+    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
+    print(
+        "{} < {}".format(
+            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+        )
+    )
+    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+
+
+def test_solidity_add_liquidity(
+    WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol
+):
+    liquidity = 0  # to imporve
+    initial_dai_balance = DAI.balanceOf(uniRouter.account)
+    amount = web3.toWei(0.05, "ether")
+    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
+    print(1 / price)
+    required_dai_balance = price * amount + ((price * amount) * 0.09)
+
+    # to be improved
+    if initial_dai_balance < required_dai_balance:
+        amount_to_swap = amount + (amount * 0.1)
+        uniRouter.approve_erc20(
+            amount_to_swap, uniRouter.router_v2.address, WETH.address
+        )
+        uniRouter.swap(WETH.address, DAI.address, price, amount_to_swap)
+
+    initial_weth_balance = WETH.balanceOf(uniRouter.account)
+    if initial_weth_balance < amount:
+        tx = WETH.deposit({"from": uniRouter.account, "value": amount * 10 ** 18})
+        tx.wait(1)
+
+    allowance = WETH.allowance(uniRouter.account, router_sol.address)
+    if allowance < amount:
+        WETH.approve(router_sol.address, amount, {"from": uniRouter.account})
+
+    balance = DAI.balanceOf(uniRouter.account)
+    print(f"DAI balance: {balance}")
+    if allowance < required_dai_balance:
+        DAI.approve(router_sol.address, balance, {"from": uniRouter.account})
+    allowance = DAI.allowance(uniRouter.account, router_sol.address)
+    print(f"DAI allowance: {allowance}")
+
+    liquidity = router_sol.provideLiquidity.call(
+        WETH.address,
+        DAI.address,
+        uniRouter.router_v2.address,
+        amount,
+        {"from": uniRouter.account},
+    )
+    print(f"Liquidity: {liquidity}")
+    assert liquidity > 0

@@ -1,5 +1,5 @@
 import pytest
-from brownie import config, network, web3, accounts, interface
+from brownie import config, network, web3, accounts, interface, Router
 from tests.rounter_v2_api import Routerv2Api
 from tests.arbitrage_api import Arbitrage
 
@@ -141,7 +141,7 @@ def get_weth_1(WETH, account_1):
 
 
 @pytest.fixture()
-def make_arbitrage_opportunity(WETH, DAI, PRICE_FEEDS, get_weth_1, uniRouter_1):
+def create_arbitrage_opportunity(WETH, DAI, PRICE_FEEDS, get_weth_1, uniRouter_1):
     """"""
     initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
     amount = web3.toWei(80, "ether")
@@ -178,6 +178,11 @@ def DAI():
 @pytest.fixture(scope="module")
 def WETH():
     yield interface.WethInterface(config["networks"][network.show_active()]["weth"])
+
+
+@pytest.fixture(scope="module")
+def router_sol(main_account):
+    yield Router.deploy({"from": main_account})
 
 
 # @pytest.fixture(scope="module")

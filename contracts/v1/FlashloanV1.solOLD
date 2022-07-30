@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: MIT license
+pragma solidity ^0.5.0;
+
+import "@aave/contracts/flashloan/base/FlashLoanReceiverBase.sol";
+import "@aave/contracts/configuration/LendingPoolAddressesProvider.sol";
+import "@aave/contracts/configuration/NetworkMetadataProvider.sol";
+import "./openzeppelin/SafeMath.sol";
+
+contract FlashLoanReceiverExample is FlashLoanReceiverBase {
+    using SafeMath for uint256;
+
+    constructor(LendingPoolAddressesProvider _provider)
+        public
+        FlashLoanReceiverBase(_provider)
+    {}
+
+    function executeOperation(
+        address _reserve,
+        uint256 _amount,
+        uint256 _fee,
+        bytes memory _params
+    ) external {
+        //check the contract has the specified balance
+        require(
+            _amount <= getBalanceInternal(address(this), _reserve),
+            "Invalid balance for the contract"
+        );
+
+        /**
+            CUSTOM ACTION TO PERFORM WITH THE BORROWED LIQUIDITY
+            
+            Example of decoding bytes param of type `address` and `uint`
+            (address sampleAddress, uint sampleAmount) = abi.decode(_params, (address, uint));
+        */
+
+        transferFundsBackToPoolInternal(_reserve, _amount.add(_fee));
+    }
+}

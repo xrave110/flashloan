@@ -4,12 +4,47 @@ pragma solidity ^0.6.6;
 import "./aave/FlashLoanReceiverBaseV2.sol";
 import "../../interfaces/v2/ILendingPoolAddressesProviderV2.sol";
 import "../../interfaces/v2/ILendingPoolV2.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/IERC20/IERC20.sol";
+import "@uniswap/v2-periphery@1.0.0-beta.0/contracts/interfaces/IUniswapV2Router02.sol";
+import "./routersv2/Router.sol";
 
-contract FlashloanV2 is FlashLoanReceiverBaseV2, Withdrawable {
-    constructor(address _addressProvider)
-        public
-        FlashLoanReceiverBaseV2(_addressProvider)
-    {}
+contract FlashloanV2 is FlashLoanReceiverBaseV2, Withdrawable, Router {
+    address public addressTokenA;
+    address public addressTokenB;
+    address public tokenACheaperRouterAddress;
+    address public tokenBCheaperRouterAddress;
+
+    constructor(
+        address _addressProvider,
+        address _addressTokenA,
+        address _addressTokenB,
+        address _tokenACheaperRouterAddress,
+        address _tokenBCheaperRouterAddress
+    ) public FlashLoanReceiverBaseV2(_addressProvider) {
+        addressTokenA = _addressTokenA;
+        addressTokenB = _addressTokenB;
+        tokenACheaperRouterAddress = _tokenACheaperRouterAddress;
+        tokenBCheaperRouterAddress = _tokenBCheaperRouterAddress;
+    }
+
+    /*
+     * Start the arbitrage
+     */
+    function makeArbitrage(uint256 amount) public onlyOwner {
+        bytes memory data = "";
+
+        IERC20 token = IERC20(addressTokenA);
+        flashLoan(address(this), token, amount, data);
+
+        // Any left amount of DAI is considered profit
+        uint256 profit = token.balanceOf(address(this));
+        // Sending back the profits
+        require(
+            token.transfer(msg.sender, profit),
+            "Could not transfer back the profit"
+        );
+    }
 
     /**
      * @dev This function must be called only be the LENDING_POOL and takes care of repaying
@@ -31,7 +66,16 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2, Withdrawable {
         //
         // This contract now has the funds requested.
         // Your logic goes here.
-        //
+        uint256 deadline = now + 3000;
+        IERC20 fromToken = IERC20(addressTokenA);
+        fromToken.approve(addressTokenA, amounts[0]);
+        swapTokens(
+            addressTokenA,
+            addressTokenB,
+            tokenACheaperRouterAddress,
+            amount,
+            to
+        );
 
         // At the end of your logic above, this contract owes
         // the flashloaned amounts + premiums.

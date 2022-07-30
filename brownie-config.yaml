@@ -4,13 +4,16 @@ autofetch_sources: True
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.0.0
   - Uniswap/v2-periphery@1.0.0-beta.0
+  - Uniswap/v2-core@1.0.0
+  - aave/protocol-v2@1.0.1
 dotenv: .env
 # path remapping to support OpenZepplin imports with NPM-style path
 compiler:
   solc:
     remappings:
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.0.0"
-      - "@uniswap=Uniswap/v2-periphery@1.0.0"
+      - "@uniswap=Uniswap"
+      - "@aave=aave/protocol-v2@1.0.1"
 networks:
   default: kovan
   mainnet-fork-dev:
