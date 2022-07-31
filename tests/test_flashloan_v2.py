@@ -3,7 +3,7 @@
 # i.e. one that does not implement any custom logic.
 
 # The initial transfer should be removed prior to testing your final implementation.
-from brownie import interface, web3
+from brownie import accounts, web3
 import pytest
 import pdb
 
@@ -156,6 +156,7 @@ def test_solidity_swap(WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol):
 def test_solidity_add_liquidity(
     WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol
 ):
+    pytest.skip()
     liquidity = 0  # to imporve
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
@@ -196,3 +197,39 @@ def test_solidity_add_liquidity(
     )
     print(f"Liquidity: {liquidity}")
     assert liquidity > 0
+
+
+def test_arbitrage_flashloan(
+    WETH,
+    DAI,
+    PRICE_FEEDS,
+    main_account,  # TBD can be main_account instead
+    get_weth,
+    flashloan_uni_sushi_weth_dai,
+):
+    initial_weth_balance = WETH.balanceOf(main_account)
+    amount_to_lend = web3.toWei(5, "ether")
+    try:
+        accounts[0].transfer(flashloan_uni_sushi_weth_dai.address, "0.05 ether")
+    except:
+        raise ("Issue with transfering funds")
+
+    print(f"Initial WETH balance {initial_weth_balance}")
+    print(
+        f"ETH balance of flashloan contract: {flashloan_uni_sushi_weth_dai.balance()}"
+    )
+
+    flashloan_uni_sushi_weth_dai.makeArbitrage(
+        amount_to_lend,
+        {"from": main_account},
+    )
+    flashloan_uni_sushi_weth_dai.withdrawTokenAProfit({"from": main_account})
+    final_weth_balance = WETH.balanceOf(main_account)
+    # price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
+    assert initial_weth_balance < final_weth_balance
+    # print(
+    #     "{} < {}".format(
+    #         initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+    #     )
+    # )
+    # assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance

@@ -1,7 +1,8 @@
 import pytest
-from brownie import config, network, web3, accounts, interface, Router
+from brownie import config, network, web3, accounts, interface, Router, FlashloanV2
 from tests.rounter_v2_api import Routerv2Api
 from tests.arbitrage_api import Arbitrage
+
 
 # import pdb
 
@@ -140,7 +141,7 @@ def get_weth_1(WETH, account_1):
         return WETH.balanceOf(account_1)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def create_arbitrage_opportunity(WETH, DAI, PRICE_FEEDS, get_weth_1, uniRouter_1):
     """"""
     initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
@@ -183,6 +184,44 @@ def WETH():
 @pytest.fixture(scope="module")
 def router_sol(main_account):
     yield Router.deploy({"from": main_account})
+
+
+@pytest.fixture(scope="module")
+def flashloan_uni_sushi_weth_dai(
+    WETH, DAI, main_account, uni_sushi_arbitrage_obj, create_arbitrage_opportunity
+):
+    ADDRESS_PROVIDER = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8"
+    [dex1_quote, dex2_quote] = uni_sushi_arbitrage_obj.check_pools()
+    if dex1_quote > dex2_quote:
+        print(
+            "Dex1 has more expensive {} (cheaper {})".format(
+                uni_sushi_arbitrage_obj.tokenA_symbol,
+                uni_sushi_arbitrage_obj.tokenB_symbol,
+            )
+        )
+        yield FlashloanV2.deploy(
+            ADDRESS_PROVIDER,
+            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
+            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            WETH.address,
+            DAI.address,
+            {"from": main_account},
+        )
+    else:
+        print(
+            "Dex2 has more expensive {} (cheaper {})".format(
+                uni_sushi_arbitrage_obj.tokenA_symbol,
+                uni_sushi_arbitrage_obj.tokenB_symbol,
+            )
+        )
+        yield FlashloanV2.deploy(
+            ADDRESS_PROVIDER,
+            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
+            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            WETH.address,
+            DAI.address,
+            {"from": main_account},
+        )
 
 
 # @pytest.fixture(scope="module")
