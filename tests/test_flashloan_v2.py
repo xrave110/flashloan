@@ -4,6 +4,7 @@
 
 # The initial transfer should be removed prior to testing your final implementation.
 from brownie import accounts, web3
+from brownie import FlashloanV2, interface, accounts  # temporary
 import pytest
 import pdb
 
@@ -233,3 +234,25 @@ def test_arbitrage_flashloan(
     #     )
     # )
     # assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+
+
+def test_arbitrage_flashloan2(create_arbitrage_opportunity):
+    aave_lending_pool_v2 = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5"
+    flashloan = FlashloanV2.deploy(
+        aave_lending_pool_v2,
+        "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
+        "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+        {"from": accounts[0]},
+    )
+
+    WETH = interface.IERC20("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
+    WETH.transfer(accounts[0], "1 ether", {"from": WETH.address})
+    initial_weth_amount = web3.fromWei(int(WETH.balanceOf(accounts[0])), "ether")
+    print(f"initial weth amount: {initial_weth_amount}")
+    WETH.transfer(flashloan, "1 ether", {"from": accounts[0]})
+    print(f"FLashloan and arbitrage...")
+    flashloan.makeArbitrage("10 ether")
+    final_weth_amount = web3.fromWei(int(WETH.balanceOf(accounts[0])), "ether")
+    print(f"final weth amount: {final_weth_amount}")

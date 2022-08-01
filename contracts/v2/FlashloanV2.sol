@@ -40,17 +40,6 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2 {
         uint256 _amount,
         address _to
     ) public returns (uint256) {
-        require(
-            uint256(
-                IERC20(_addressFromToken).allowance(msg.sender, address(this))
-            ) >= _amount,
-            "Not enough allowance"
-        );
-        IERC20(_addressFromToken).transferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
         IERC20(_addressFromToken).approve(_routerAddress, _amount);
         address[] memory path;
         path = new address[](2);
@@ -58,6 +47,15 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2 {
         path[1] = _addressToToken;
         uint256 deadline = block.timestamp + 120;
         IUniswapV2Router02 routerContract = IUniswapV2Router02(_routerAddress);
+        require(
+            uint256(
+                IERC20(_addressFromToken).allowance(
+                    address(this),
+                    _routerAddress
+                )
+            ) >= _amount,
+            "Not enough allowance"
+        );
         uint256[] memory tokenBought = routerContract.swapExactTokensForTokens(
             _amount,
             0,
@@ -109,6 +107,7 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2 {
         //
         // This contract now has the funds requested.
         // Your logic goes here.
+
         require(
             addressTokenA == assets[0],
             "There is a difference between asset addresses"
@@ -117,7 +116,13 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2 {
         uint256 deadline = now + 3000;
         IERC20 fromToken = IERC20(addressTokenA);
         require(fromToken.balanceOf(address(this)) > 0, "There is no tokenA");
+        require(
+            fromToken.balanceOf(address(this)) > amount,
+            "There is a different amount"
+        );
+        require(amount > 0, "There is no loan!");
         fromToken.approve(addressTokenA, amounts[0]);
+
         swapTokens(
             addressTokenA,
             addressTokenB,
@@ -125,6 +130,7 @@ contract FlashloanV2 is FlashLoanReceiverBaseV2 {
             amount,
             address(this)
         );
+
         uint256 balanceOfTokenB = IERC20(addressTokenB).balanceOf(
             address(this)
         );
