@@ -9,37 +9,38 @@ import pytest
 import pdb
 
 
-def test_eth_dai_swap(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
+def test_eth_dai_swap(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter, dai_weth_price):
     """"""
-    pytest.skip()
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
     uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
-    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
-    uniRouter.swap(WETH.address, DAI.address, price, amount)
+    uniRouter.swap(WETH.address, DAI.address, dai_weth_price, amount)
     final_dai_balance = DAI.balanceOf(uniRouter.account)
     print(
         "{} < {}".format(
-            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+            initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9),
+            final_dai_balance,
         )
     )
 
-    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+    assert (
+        initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9) < final_dai_balance
+    )
 
 
 @pytest.fixture()
-def test_provide_eth_dai_liquidity(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
+def test_provide_eth_dai_liquidity(
+    WETH, DAI, PRICE_FEEDS, get_weth, uniRouter, dai_weth_price
+):
     """"""
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
-    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
-    print(1 / price)
-    required_dai_balance = price * amount
+    required_dai_balance = dai_weth_price * amount
 
     # to be improved
     if initial_dai_balance < required_dai_balance:
         uniRouter.approve_erc20(amount, uniRouter.router_v2.address, WETH.address)
-        uniRouter.swap(WETH.address, DAI.address, price, amount)
+        uniRouter.swap(WETH.address, DAI.address, dai_weth_price, amount)
 
     initial_weth_balance = WETH.balanceOf(uniRouter.account)
     if initial_weth_balance < amount:
@@ -51,7 +52,7 @@ def test_provide_eth_dai_liquidity(WETH, DAI, PRICE_FEEDS, get_weth, uniRouter):
         DAI.address, WETH.address
     ).balanceOf(uniRouter.account)
     print("Before: {}".format(initial_pair_liquidity))
-    uniRouter.addLiquidity(DAI.address, WETH.address, amount, price)
+    uniRouter.addLiquidity(DAI.address, WETH.address, amount, dai_weth_price)
     final_pair_liquidity = uniRouter.get_pair_liquidity(DAI.address, WETH.address)
     final_pair_balance = uniRouter.get_pair_contract(
         DAI.address, WETH.address
@@ -129,7 +130,9 @@ def test_batch_eth_dai_flashloan(Contract, accounts, DAI, WETH):
     flashloan_v2.flashloan([WETH, DAI], ["1 ether", "1 ether"], {"from": accounts[0]})
 
 
-def test_solidity_swap(WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol):
+def test_solidity_swap(
+    WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, dai_weth_price, router_sol
+):
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
     allowance = WETH.allowance(uniRouter.account, router_sol.address)
@@ -145,25 +148,26 @@ def test_solidity_swap(WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol):
         {"from": uniRouter.account},
     )
     final_dai_balance = DAI.balanceOf(uniRouter.account)
-    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
     print(
         "{} < {}".format(
-            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+            initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9),
+            final_dai_balance,
         )
     )
-    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+    assert (
+        initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9) < final_dai_balance
+    )
 
 
 def test_solidity_add_liquidity(
-    WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, router_sol
+    WETH, DAI, PRICE_FEEDS, uniRouter, get_weth, dai_weth_price, router_sol
 ):
     pytest.skip()
     liquidity = 0  # to imporve
     initial_dai_balance = DAI.balanceOf(uniRouter.account)
     amount = web3.toWei(0.05, "ether")
-    price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
-    print(1 / price)
-    required_dai_balance = price * amount + ((price * amount) * 0.09)
+    print(1 / dai_weth_price)
+    required_dai_balance = dai_weth_price * amount + ((dai_weth_price * amount) * 0.09)
 
     # to be improved
     if initial_dai_balance < required_dai_balance:
@@ -204,55 +208,37 @@ def test_arbitrage_flashloan(
     WETH,
     DAI,
     PRICE_FEEDS,
-    main_account,  # TBD can be main_account instead
+    main_account,
     get_weth,
+    eth_usd_price,
     flashloan_uni_sushi_weth_dai,
 ):
-    initial_weth_balance = WETH.balanceOf(main_account)
-    amount_to_lend = web3.toWei(5, "ether")
+    amount = 10
+    initial_weth_balance = float(
+        web3.fromWei(int(WETH.balanceOf(main_account)), "ether")
+    )
+    initial_usd_balance = initial_weth_balance * eth_usd_price
+    amount_to_lend = web3.toWei(amount, "ether")
     try:
-        accounts[0].transfer(flashloan_uni_sushi_weth_dai.address, "0.05 ether")
+        WETH.transfer(
+            flashloan_uni_sushi_weth_dai.address, "0.5 ether", {"from": main_account}
+        )
     except:
         raise ("Issue with transfering funds")
 
     print(f"Initial WETH balance {initial_weth_balance}")
-    print(
-        f"ETH balance of flashloan contract: {flashloan_uni_sushi_weth_dai.balance()}"
-    )
 
+    print(f"FLashloan with {amount} WETH and arbitrage...")
     flashloan_uni_sushi_weth_dai.makeArbitrage(
         amount_to_lend,
-        {"from": main_account},
     )
-    flashloan_uni_sushi_weth_dai.withdrawTokenAProfit({"from": main_account})
-    final_weth_balance = WETH.balanceOf(main_account)
-    # price = uniRouter.get_asset_price(PRICE_FEEDS["DAI_WETH"])
+    final_weth_balance = float(web3.fromWei(int(WETH.balanceOf(main_account)), "ether"))
+    final_usd_balance = final_weth_balance * eth_usd_price
+    print(f"Final WETH balance {final_weth_balance}")
+    print(
+        "Contgratulations! You have managed to earn {} USD ({} WETH) with flashloan !".format(
+            (final_usd_balance - initial_usd_balance),
+            (final_weth_balance - initial_weth_balance),
+        )
+    )
     assert initial_weth_balance < final_weth_balance
-    # print(
-    #     "{} < {}".format(
-    #         initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
-    #     )
-    # )
-    # assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
-
-
-def test_arbitrage_flashloan2(create_arbitrage_opportunity):
-    aave_lending_pool_v2 = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5"
-    flashloan = FlashloanV2.deploy(
-        aave_lending_pool_v2,
-        "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-        "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-        "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
-        "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-        {"from": accounts[0]},
-    )
-
-    WETH = interface.IERC20("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
-    WETH.transfer(accounts[0], "1 ether", {"from": WETH.address})
-    initial_weth_amount = web3.fromWei(int(WETH.balanceOf(accounts[0])), "ether")
-    print(f"initial weth amount: {initial_weth_amount}")
-    WETH.transfer(flashloan, "1 ether", {"from": accounts[0]})
-    print(f"FLashloan and arbitrage...")
-    flashloan.makeArbitrage("10 ether")
-    final_weth_amount = web3.fromWei(int(WETH.balanceOf(accounts[0])), "ether")
-    print(f"final weth amount: {final_weth_amount}")

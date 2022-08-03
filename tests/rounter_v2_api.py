@@ -22,12 +22,6 @@ class Routerv2Api:
             tx_hash.wait(1)
         return tx_hash
 
-    def get_asset_price(self, address_price_feed, reverted=False):
-        price_feed = interface.AggregatorV3Interface(address_price_feed)
-        latest_price = web3.fromWei(price_feed.latestRoundData()[1], "ether")
-        print(latest_price)
-        return float(latest_price)
-
     def swap(
         self,
         address_from_token,

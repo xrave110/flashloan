@@ -26,19 +26,19 @@ class Arbitrage:
             self.tokenA_address, self.tokenB_address
         )
         [
-            tokenA_reserves,
             tokenB_reserves,
+            tokenA_reserves,
             timestampReceived,
         ] = pair_contract.getReserves()
         print(
-            "Dex1 reserves:\n{} {} is {} {}".format(
-                web3.fromWei(tokenA_reserves, "ether"),
-                self.tokenA_symbol,
+            "Dex1 reserves:\n{} {} and {} {}".format(
                 web3.fromWei(tokenB_reserves, "ether"),
                 self.tokenB_symbol,
+                web3.fromWei(tokenA_reserves, "ether"),
+                self.tokenA_symbol,
             )
         )
-        dex1_quote = tokenA_reserves / tokenB_reserves
+        dex1_quote = tokenB_reserves / tokenA_reserves
         print(
             "Dex1 :\n1 {} is {} {} ".format(
                 self.tokenA_symbol, dex1_quote, self.tokenB_symbol
@@ -47,16 +47,20 @@ class Arbitrage:
         pair_contract = self.router_dex2.get_pair_contract(
             self.tokenA_address, self.tokenB_address
         )
-        [dai_reserves, weth_reserves, timestampReceived] = pair_contract.getReserves()
+        [
+            tokenB_reserves,
+            tokenA_reserves,
+            timestampReceived,
+        ] = pair_contract.getReserves()
         print(
-            "Dex2 reserves:\n{} {} is {} {} ".format(
-                web3.fromWei(tokenA_reserves, "ether"),
-                self.tokenA_symbol,
+            "Dex2 reserves:\n{} {} and {} {} ".format(
                 web3.fromWei(tokenB_reserves, "ether"),
                 self.tokenB_symbol,
+                web3.fromWei(tokenA_reserves, "ether"),
+                self.tokenA_symbol,
             )
         )
-        dex2_quote = dai_reserves / weth_reserves
+        dex2_quote = tokenB_reserves / tokenA_reserves
         print(
             "Dex2:\n1 {} is {} {} ".format(
                 self.tokenA_symbol, dex2_quote, self.tokenB_symbol

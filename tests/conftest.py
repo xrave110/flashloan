@@ -3,9 +3,6 @@ from brownie import config, network, web3, accounts, interface, Router, Flashloa
 from tests.rounter_v2_api import Routerv2Api
 from tests.arbitrage_api import Arbitrage
 
-
-# import pdb
-
 NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["hardhat", "development", "ganache"]
 LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
     "mainnet-fork",
@@ -42,13 +39,6 @@ def account_1():
         return accounts.add(config["wallets"]["from_key1"])
 
 
-def init_re(dex_type):
-    weth_address = config["networks"][network.show_active()]["weth"]
-    dai_address = config["networks"][network.show_active()]["dai"]
-    router_v2 = config["networks"][network.show_active()][dex_type]
-    contract = interface.IUniswapV2Router02(router_v2)
-
-
 @pytest.fixture(autouse=True)
 def setup(fn_isolation):
     """
@@ -59,13 +49,9 @@ def setup(fn_isolation):
     pass
 
 
-# @pytest.fixture(scope="module")
-# def flashloan_v2():
-#     yield run_flashloan()
-
-
 @pytest.fixture(scope="module")
 def uniRouter(main_account):
+    """Router instance with uniswap address"""
     router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
     yield Routerv2Api(
         account=main_account,
@@ -75,6 +61,7 @@ def uniRouter(main_account):
 
 @pytest.fixture(scope="module")
 def uniRouter_1(account_1):
+    """Router instance with uniswap address and second account"""
     router_v2_address = config["networks"][network.show_active()]["uniswap_router_v2"]
     yield Routerv2Api(
         account=account_1,
@@ -84,6 +71,7 @@ def uniRouter_1(account_1):
 
 @pytest.fixture(scope="module")
 def sushiRouter(main_account):
+    """Router instance with sushiswap address"""
     router_v2_address = config["networks"][network.show_active()]["sushiswap_router_v2"]
     yield Routerv2Api(
         account=main_account,
@@ -100,11 +88,11 @@ def aave_lending_pool_v1(Contract):
 
 
 @pytest.fixture(scope="module")
-def aave_lending_pool_v2(Contract):
+def aave_lending_pool_v2():
     """
-    Yield a `Contract` object for the Aave lending pool address provider.
+    Yield a Address of lending pool object for the Aave lending pool address provider.
     """
-    yield Contract("0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5")
+    yield config["networks"][network.show_active()]["aave_lending_pool_v2"]
 
 
 # Mainnet reserve token fixtures - addresses are taken from
@@ -120,8 +108,25 @@ def PRICE_FEEDS():
 
 
 @pytest.fixture(scope="module")
+def eth_usd_price(PRICE_FEEDS):
+    price_feed = interface.AggregatorV3Interface(PRICE_FEEDS["ETH_USD"])
+    latest_price = float(web3.fromWei(price_feed.latestRoundData()[1], "ether"))
+    print(latest_price)
+    yield latest_price * (10 ** 10)  # 18 Decimals
+
+
+@pytest.fixture(scope="module")
+def dai_weth_price(PRICE_FEEDS):
+    price_feed = interface.AggregatorV3Interface(PRICE_FEEDS["DAI_WETH"])
+    latest_price = float(web3.fromWei(price_feed.latestRoundData()[1], "ether"))
+    print(latest_price)
+    yield latest_price
+
+
+@pytest.fixture(scope="module")
 def get_weth(WETH, main_account):
-    amount = 10
+    "Get weth fixture for account 0"
+    amount = 1
     initial_balance = web3.fromWei(WETH.balanceOf(main_account), "ether")
     if initial_balance < amount:
         tx = WETH.deposit({"from": main_account, "value": amount * (10 ** 18)})
@@ -132,6 +137,7 @@ def get_weth(WETH, main_account):
 
 @pytest.fixture(scope="module")
 def get_weth_1(WETH, account_1):
+    "Get weth fixture for account 1"
     amount = 80
     initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
     if initial_balance < amount:
@@ -142,20 +148,26 @@ def get_weth_1(WETH, account_1):
 
 
 @pytest.fixture(scope="module")
-def create_arbitrage_opportunity(WETH, DAI, PRICE_FEEDS, get_weth_1, uniRouter_1):
-    """"""
+def create_arbitrage_opportunity(
+    WETH, DAI, PRICE_FEEDS, dai_weth_price, get_weth_1, uniRouter_1
+):
+    """Creates arbitrage opportunity by swapping significant amount of ETH with account 1"""
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip()
     initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
     amount = web3.toWei(80, "ether")
     uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
-    price = uniRouter_1.get_asset_price(PRICE_FEEDS["DAI_WETH"])
-    uniRouter_1.swap(WETH.address, DAI.address, price, amount)
+    uniRouter_1.swap(WETH.address, DAI.address, dai_weth_price, amount)
     final_dai_balance = DAI.balanceOf(uniRouter_1.account)
     print(
         "{} < {}".format(
-            initial_dai_balance + ((1 / price) * amount * 0.9), final_dai_balance
+            initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9),
+            final_dai_balance,
         )
     )
-    assert initial_dai_balance + ((1 / price) * amount * 0.9) < final_dai_balance
+    assert (
+        initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9) < final_dai_balance
+    )
 
 
 @pytest.fixture(scope="module")
@@ -188,9 +200,13 @@ def router_sol(main_account):
 
 @pytest.fixture(scope="module")
 def flashloan_uni_sushi_weth_dai(
-    WETH, DAI, main_account, uni_sushi_arbitrage_obj, create_arbitrage_opportunity
+    WETH,
+    DAI,
+    main_account,
+    uni_sushi_arbitrage_obj,
+    create_arbitrage_opportunity,
+    aave_lending_pool_v2,
 ):
-    ADDRESS_PROVIDER = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8"
     [dex1_quote, dex2_quote] = uni_sushi_arbitrage_obj.check_pools()
     if dex1_quote > dex2_quote:
         print(
@@ -200,11 +216,11 @@ def flashloan_uni_sushi_weth_dai(
             )
         )
         yield FlashloanV2.deploy(
-            ADDRESS_PROVIDER,
-            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
-            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            aave_lending_pool_v2,
             WETH.address,
             DAI.address,
+            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
+            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
             {"from": main_account},
         )
     else:
@@ -215,11 +231,11 @@ def flashloan_uni_sushi_weth_dai(
             )
         )
         yield FlashloanV2.deploy(
-            ADDRESS_PROVIDER,
-            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
-            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            aave_lending_pool_v2,
             WETH.address,
             DAI.address,
+            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
             {"from": main_account},
         )
 
