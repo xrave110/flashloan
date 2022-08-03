@@ -39,14 +39,14 @@ def account_1():
         return accounts.add(config["wallets"]["from_key1"])
 
 
-@pytest.fixture(autouse=True)
-def setup(fn_isolation):
-    """
-    Isolation setup fixture.
+# @pytest.fixture(autouse=True)
+# def setup(fn_isolation):
+#     """
+#     Isolation setup fixture.
 
-    This ensures that each test runs against the same base environment.
-    """
-    pass
+#     This ensures that each test runs against the same base environment.
+#     """
+#     pass
 
 
 @pytest.fixture(scope="module")
@@ -77,6 +77,14 @@ def sushiRouter(main_account):
         account=main_account,
         router_v2=interface.IUniswapV2Router02(router_v2_address),
     )
+
+
+@pytest.fixture(scope="module")
+def amount():
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        yield int(web3.toWei(10, "ether"))
+    else:
+        yield int(web3.toWei(0.5, "ether"))
 
 
 @pytest.fixture(scope="module")
@@ -124,27 +132,31 @@ def dai_weth_price(PRICE_FEEDS):
 
 
 @pytest.fixture(scope="module")
-def get_weth(WETH, main_account):
+def get_weth(WETH, main_account, amount):
     "Get weth fixture for account 0"
-    amount = 1
     initial_balance = web3.fromWei(WETH.balanceOf(main_account), "ether")
     if initial_balance < amount:
-        tx = WETH.deposit({"from": main_account, "value": amount * (10 ** 18)})
+        tx = WETH.deposit({"from": main_account, "value": amount})
         tx.wait(1)
-        print("Received {} WETH to account {}".format(amount, main_account))
+        print(
+            "Received {} WETH to account {}".format(
+                int(web3.fromWei(amount, "ether")), main_account
+            )
+        )
         return WETH.balanceOf(main_account)
 
 
 @pytest.fixture(scope="module")
 def get_weth_1(WETH, account_1):
-    "Get weth fixture for account 1"
-    amount = 80
-    initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
-    if initial_balance < amount:
-        tx = WETH.deposit({"from": account_1, "value": amount * (10 ** 18)})
-        tx.wait(1)
-        print("Received {} WETH to account {}".format(amount, account_1))
-        return WETH.balanceOf(account_1)
+    """Get weth fixture for account 1"""
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        amount = 80
+        initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
+        if initial_balance < amount:
+            tx = WETH.deposit({"from": account_1, "value": amount * (10 ** 18)})
+            tx.wait(1)
+            print("Received {} WETH to account {}".format(amount, account_1))
+            return WETH.balanceOf(account_1)
 
 
 @pytest.fixture(scope="module")
@@ -152,22 +164,22 @@ def create_arbitrage_opportunity(
     WETH, DAI, PRICE_FEEDS, dai_weth_price, get_weth_1, uniRouter_1
 ):
     """Creates arbitrage opportunity by swapping significant amount of ETH with account 1"""
-    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        pytest.skip()
-    initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
-    amount = web3.toWei(80, "ether")
-    uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
-    uniRouter_1.swap(WETH.address, DAI.address, dai_weth_price, amount)
-    final_dai_balance = DAI.balanceOf(uniRouter_1.account)
-    print(
-        "{} < {}".format(
-            initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9),
-            final_dai_balance,
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
+        amount = web3.toWei(80, "ether")
+        uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
+        uniRouter_1.swap(WETH.address, DAI.address, dai_weth_price, amount)
+        final_dai_balance = DAI.balanceOf(uniRouter_1.account)
+        print(
+            "{} < {}".format(
+                initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9),
+                final_dai_balance,
+            )
         )
-    )
-    assert (
-        initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9) < final_dai_balance
-    )
+        assert (
+            initial_dai_balance + ((1 / dai_weth_price) * amount * 0.9)
+            < final_dai_balance
+        )
 
 
 @pytest.fixture(scope="module")

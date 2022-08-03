@@ -1,5 +1,5 @@
 # automatically fetch contract sources from Etherscan
-autofetch_sources: True
+# autofetch_sources: True
 # require OpenZepplin Contracts v3.0.0
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.0.0
@@ -42,6 +42,8 @@ networks:
     weth: "0xd0a1e359811322d97991e03f863a0c30c2cf029c"
     aave_dai_token: '0xFf795577d9AC8bD7D90Ee22b6C1703490b6512FD'
     dai: "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa"
+    dai_eth_price_feed: "0x22B58f1EbEDfCA50feF632bD73368b2FdA96D541"
+    eth_usd_price_feed: "0x9326BFA02ADD2366b30bacB125260Af641031331"
     uniswap_router_v1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45"
     uniswap_router_v2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     sushiswap_router_v2: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
@@ -50,8 +52,18 @@ networks:
     oracle: '0x2f90A6D021db21e1B2A077c5a37B3C7E75D15b7e'
     jobId: '29fa9aa13bf1468788b7cc4a500a45b8'
   mainnet:
+    link_token: '0x514910771af9ca656af840dff83e8264ecf986ca'
+    aave_link_token: '0x514910771af9ca656af840dff83e8264ecf986ca'
     aave_lending_pool_v2: "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5"
     weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+    dai_eth_price_feed: "0x773616E4d11A78F511299002da57A0a94577F1f4"
+    eth_usd_price_feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+    dai: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    aave_dai_token: '0x6b175474e89094c44da98b954eedeac495271d0f'
+    uniswap_router_v1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" #"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+    uniswap_router_v2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D" # 
+    sushiswap_router_v2: "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+    explorer: "https://api.etherscan.io/api"
 wallets:
   from_key: ${PRIVATE_KEY}
   from_key1: ${PRIVATE_KEY1}

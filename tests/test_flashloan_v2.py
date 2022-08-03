@@ -77,12 +77,12 @@ def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liq
         assert False
 
 
-def test_arbitrage(WETH, DAI, uni_sushi_arbitrage_obj, create_arbitrage_opportunity):
+def test_arbitrage(
+    WETH, DAI, amount, uni_sushi_arbitrage_obj, create_arbitrage_opportunity
+):
     initial_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
     initial_usd_balance = uni_sushi_arbitrage_obj.get_current_balances()
-    final_usd_balance = uni_sushi_arbitrage_obj.perform_arbitrage(
-        web3.toWei(10, "ether")
-    )
+    final_usd_balance = uni_sushi_arbitrage_obj.perform_arbitrage(amount)
     final_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
     assert initial_usd_balance < final_usd_balance
     assert initial_eth_balance < final_eth_balance
@@ -213,6 +213,7 @@ def test_arbitrage_flashloan(
     eth_usd_price,
     flashloan_uni_sushi_weth_dai,
 ):
+    pytest.skip()
     amount = 10
     initial_weth_balance = float(
         web3.fromWei(int(WETH.balanceOf(main_account)), "ether")
@@ -229,9 +230,7 @@ def test_arbitrage_flashloan(
     print(f"Initial WETH balance {initial_weth_balance}")
 
     print(f"FLashloan with {amount} WETH and arbitrage...")
-    flashloan_uni_sushi_weth_dai.makeArbitrage(
-        amount_to_lend,
-    )
+    flashloan_uni_sushi_weth_dai.makeArbitrage(amount_to_lend, {"from": main_account})
     final_weth_balance = float(web3.fromWei(int(WETH.balanceOf(main_account)), "ether"))
     final_usd_balance = final_weth_balance * eth_usd_price
     print(f"Final WETH balance {final_weth_balance}")

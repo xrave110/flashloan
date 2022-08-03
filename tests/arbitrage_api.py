@@ -154,16 +154,16 @@ class Arbitrage:
                 cheapDex.router_v2,
                 self.tokenA_address,
             )
-            # print(
-            #     "Allowance for DAI {} \n amount to swap: {} ".format(
-            #         float(
-            #             interface.IERC20(cheapDex.dai_address).allowance(
-            #                 cheapDex.account, cheapDex.router_v2
-            #             )
-            #         ),
-            #         amount_to_swap,
-            #     )
-            # )
+            print(
+                "Allowance for tokenA {} \n amount to swap: {} ".format(
+                    float(
+                        interface.IERC20(self.tokenA_address).allowance(
+                            cheapDex.account, cheapDex.router_v2
+                        )
+                    ),
+                    amount_to_swap,
+                )
+            )
 
             print("Swapping {} to {}...".format(self.tokenA_symbol, self.tokenB_symbol))
             cheapDex.swap(
