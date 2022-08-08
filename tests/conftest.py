@@ -134,6 +134,7 @@ def dai_weth_price(PRICE_FEEDS):
 @pytest.fixture(scope="module")
 def get_weth(WETH, main_account, amount):
     "Get weth fixture for account 0"
+    amount = amount * 1.2
     initial_balance = web3.fromWei(WETH.balanceOf(main_account), "ether")
     if initial_balance < amount:
         tx = WETH.deposit({"from": main_account, "value": amount})

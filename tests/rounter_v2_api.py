@@ -11,7 +11,6 @@ class Routerv2Api:
         tx_hash = None
         print("Approving ERC20...")
         erc20 = interface.IERC20(erc20_address)
-        print(self.account)
         allowance = erc20.allowance(self.account, to)
         if allowance > amount:
             print("You have already allowance {} ERC20 tokens!".format(allowance))
@@ -25,7 +24,7 @@ class Routerv2Api:
     def get_asset_price(self, address_price_feed, reverted=False):
         price_feed = interface.AggregatorV3Interface(address_price_feed)
         latest_price = web3.fromWei(price_feed.latestRoundData()[1], "ether")
-        print(latest_price)
+        print(f"Price feed latest data: {latest_price}")
         return float(latest_price)
 
     def swap(

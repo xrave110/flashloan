@@ -78,12 +78,14 @@ def test_remove_eth_dai_liquidity(WETH, DAI, uniRouter, test_provide_eth_dai_liq
 
 
 def test_arbitrage(
-    WETH, DAI, amount, uni_sushi_arbitrage_obj, create_arbitrage_opportunity
+    WETH, DAI, get_weth, amount, uni_sushi_arbitrage_obj, create_arbitrage_opportunity
 ):
     initial_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
+    print(f"INITIAL: {initial_eth_balance}")
     initial_usd_balance = uni_sushi_arbitrage_obj.get_current_balances()
     final_usd_balance = uni_sushi_arbitrage_obj.perform_arbitrage(amount)
     final_eth_balance = WETH.balanceOf(uni_sushi_arbitrage_obj.router_dex1.account)
+    print(f"FINAL: {final_eth_balance}")
     assert initial_usd_balance < final_usd_balance
     assert initial_eth_balance < final_eth_balance
 
@@ -213,7 +215,7 @@ def test_arbitrage_flashloan(
     eth_usd_price,
     flashloan_uni_sushi_weth_dai,
 ):
-    pytest.skip()
+    # pytest.skip()
     amount = 10
     initial_weth_balance = float(
         web3.fromWei(int(WETH.balanceOf(main_account)), "ether")
