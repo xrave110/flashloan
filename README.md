@@ -46,14 +46,23 @@ Aave is a lending and borrowing protocol. As the name shows protocol allows to l
 ## How pytest works and what are the fixtures ?
 
 ## Brownie config
-## Router class
 
-## Arbitrage class
+## Api scheme
+The reason for writing api class is to standarize interfaces along dexes. Despite of many differences, the main functionalities remain the same: swap, get price determined by pool and add/remove liquidity. All this three functionalities must be encapusalted from Dex's interfaces into the class api.
+## RouterV2_Api class
 
-## Conftest preparation
+## Curve_Api class
+
+## Balancer_Api class
 
 # Flashloans with brownie and pytest #3 - Arbitrage tests and flashloan implementation
 
+
+## Arbitrage class
+
+## Integration classes with arbitrage
+
+## Conftest preparation
 ## Tests
 
 ## Pytest CLI (debugging)
@@ -62,16 +71,11 @@ Aave is a lending and borrowing protocol. As the name shows protocol allows to l
 
 ## Final Tests
 
-# Flashloans with brownie and pytest #4 - Expanding to new protocols Curve and Balancer and blockchains
-
-## Curve class
-
-## Balancer class
-
-## Integration classes with tests
+# Flashloans with brownie and pytest #4 - Expanding to blockchains
 
 ## Expanding to new blockchain (Polygon example)
 
+## Expanding to new blockchain (Avalanche example)
 ## Flashloan repo
 
 ### Content

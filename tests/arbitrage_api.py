@@ -1,4 +1,3 @@
-from audioop import reverse
 from brownie import web3, interface
 
 
@@ -22,45 +21,19 @@ class Arbitrage:
         self.address_base_token_price_feed = address_base_token_price_feed
 
     def check_pools(self):
-        pair_contract = self.router_dex1.get_pair_contract(
+        dex1_quote = self.router_dex1.get_pair_quote(
             self.tokenA_address, self.tokenB_address
         )
-        [
-            tokenB_reserves,
-            tokenA_reserves,
-            timestampReceived,
-        ] = pair_contract.getReserves()
-        print(
-            "Dex1 reserves:\n{} {} and {} {}".format(
-                web3.fromWei(tokenB_reserves, "ether"),
-                self.tokenB_symbol,
-                web3.fromWei(tokenA_reserves, "ether"),
-                self.tokenA_symbol,
-            )
-        )
-        dex1_quote = tokenB_reserves / tokenA_reserves
+        print("Quote: {}".format(dex1_quote))
         print(
             "Dex1 :\n1 {} is {} {} ".format(
                 self.tokenA_symbol, dex1_quote, self.tokenB_symbol
             )
         )
-        pair_contract = self.router_dex2.get_pair_contract(
+        dex2_quote = self.router_dex2.get_pair_quote(
             self.tokenA_address, self.tokenB_address
         )
-        [
-            tokenB_reserves,
-            tokenA_reserves,
-            timestampReceived,
-        ] = pair_contract.getReserves()
-        print(
-            "Dex2 reserves:\n{} {} and {} {} ".format(
-                web3.fromWei(tokenB_reserves, "ether"),
-                self.tokenB_symbol,
-                web3.fromWei(tokenA_reserves, "ether"),
-                self.tokenA_symbol,
-            )
-        )
-        dex2_quote = tokenB_reserves / tokenA_reserves
+        print("Quote: {}".format(dex2_quote))
         print(
             "Dex2:\n1 {} is {} {} ".format(
                 self.tokenA_symbol, dex2_quote, self.tokenB_symbol

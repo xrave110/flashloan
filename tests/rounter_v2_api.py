@@ -91,6 +91,11 @@ class Routerv2Api:
         # )
         return pair.balanceOf(self.account)
 
+    def get_pair_quote(self, address_token_a, address_token_b):
+        pair = self.get_pair_contract(address_token_a, address_token_b)
+        [reserves_a, reserves_b, a] = pair.getReserves()
+        return reserves_a / reserves_b
+
     def remove_liquidity(self, address_token_a, address_token_b):
         liquidityTokens = self.get_pair_liquidity(address_token_a, address_token_b)
         timestamp = chain[web3.eth.get_block_number()]["timestamp"] + 120

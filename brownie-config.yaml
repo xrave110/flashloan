@@ -31,6 +31,8 @@ networks:
     uniswap_router_v1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" #"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     uniswap_router_v2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D" # 
     sushiswap_router_v2: "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+    curve_provider: "0x0000000022D53366457F9d5E68Ec105046FC4383"
+    balancer_vault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
     explorer: "https://api.etherscan.io/api"
   kovan:
     # https://aave.github.io/aave-addresses/kovan.json
