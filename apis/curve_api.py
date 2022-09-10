@@ -1,5 +1,5 @@
 from brownie import exceptions
-from brownie import Contract, interface, web3, accounts
+from brownie import Contract, interface, web3
 
 ASSET_TYPE_MAPPING = {
     "0": "USD",
@@ -24,9 +24,6 @@ class Curve:
                 3
             )  # https://curve.readthedocs.io/factory-deployer.html
         )
-        self.synth_swaps = self.provider.get_address(
-            5
-        )  # https://curve.readthedocs.io/exchange-cross-asset-swaps.html !!!!
         self.account = account
 
     def approve_erc20(self, amount, to, erc20_address):
@@ -72,24 +69,28 @@ class Curve:
     def get_all_metapool_names_and_tokens(self):
         for idx in range(self.factory.pool_count()):
             pool_address = self.factory.pool_list(idx)
-            # pool_contract = Contract.from_explorer(pool_address)
+            pool_contract = Contract.from_explorer(pool_address)
             dict_of_coins = {}
-            coins = self.factory.get_coins(pool_address)
-            coins = set(
-                filter(
-                    lambda address: True if ("0" * 40) not in address else False,
-                    coins,
-                )
-            )
-            print(coins)
+            coins = []
+            for i in range(4):
+                try:
+                    coins.append(pool_contract.coins(i))
+                except exceptions.VirtualMachineError:
+                    break
             for coin in coins:
                 if "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" == coin:
                     symbol = "ETH"
                 else:
                     symbol = interface.IERC20(coin).symbol()
                 dict_of_coins[symbol] = coin
-                if "ETH" in symbol:
-                    print(f"Pool {idx}\nDetails: {dict_of_coins}\n---------")
+
+            lp_token = self.factory.get_lp_token(pool_address)
+            lp_name = interface.IERC20(lp_token).name()
+            lp_symbol = interface.IERC20(lp_token).symbol()
+            asset_type = self.factory.get_pool_asset_type(pool_address)
+            print(
+                f"LP token: {lp_name} ({lp_symbol})\nAsset type: {ASSET_TYPE_MAPPING[str(asset_type)]}\nDetails: {dict_of_coins}\n---------"
+            )
 
     def _find_pool_with_tokens(
         self, address_from_token, address_to_token, from_to_price, amount
@@ -173,9 +174,3 @@ class Curve:
         latest_price = web3.fromWei(price_feed.latestRoundData()[1], "ether")
         print(f"Price feed latest data: {latest_price}")
         return float(latest_price)
-
-
-def main():
-    crv = Curve(accounts[0], "0x0000000022D53366457F9d5E68Ec105046FC4383")
-    # crv.get_all_pool_names_and_tokens()
-    crv.get_all_metapool_names_and_tokens()

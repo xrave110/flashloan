@@ -26,7 +26,9 @@ networks:
     weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     dai_eth_price_feed: "0x773616E4d11A78F511299002da57A0a94577F1f4"
     eth_usd_price_feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+    usdc_eth_price_feed: "0x986b5E1e1755e3C2440e960477f25201B0a8bbD4"
     dai: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     aave_dai_token: '0x6b175474e89094c44da98b954eedeac495271d0f'
     uniswap_router_v1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" #"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     uniswap_router_v2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D" # 
@@ -60,11 +62,14 @@ networks:
     weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     dai_eth_price_feed: "0x773616E4d11A78F511299002da57A0a94577F1f4"
     eth_usd_price_feed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+    usdc_eth_price_feed: "0x986b5E1e1755e3C2440e960477f25201B0a8bbD4"
     dai: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    usdc: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     aave_dai_token: '0x6b175474e89094c44da98b954eedeac495271d0f'
     uniswap_router_v1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45" #"0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
     uniswap_router_v2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D" # 
     sushiswap_router_v2: "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+    curve_provider: "0x0000000022D53366457F9d5E68Ec105046FC4383"
     explorer: "https://api.etherscan.io/api"
 wallets:
   from_key: ${PRIVATE_KEY}

@@ -1,7 +1,17 @@
 import pytest
-from brownie import config, network, web3, accounts, interface, Router, FlashloanV2
-from tests.rounter_v2_api import Routerv2Api
-from tests.arbitrage_api import Arbitrage
+from brownie import (
+    config,
+    network,
+    web3,
+    accounts,
+    interface,
+    Router,
+    FlashloanV2,
+    ETH_ADDRESS,
+)
+from apis.rounter_v2_api import Routerv2Api
+from apis.arbitrage_api import Arbitrage
+from apis.curve_api import Curve
 
 NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS = ["hardhat", "development", "ganache"]
 LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
@@ -9,6 +19,7 @@ LOCAL_BLOCKCHAIN_ENVIRONMENTS = NON_FORKED_LOCAL_BLOCKCHAIN_ENVIRONMENTS + [
     "binance-fork",
     "matic-fork",
 ]
+AMOUNT_1 = 49
 
 
 def check_local_blockchain_envs():
@@ -80,6 +91,16 @@ def sushiRouter(main_account):
 
 
 @pytest.fixture(scope="module")
+def curve(main_account):
+    """Curve finance instance"""
+    curve_provider_address = config["networks"][network.show_active()]["curve_provider"]
+    yield Curve(
+        account=main_account,
+        provider_address=curve_provider_address,
+    )
+
+
+@pytest.fixture(scope="module")
 def amount():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         yield int(web3.toWei(10, "ether"))
@@ -112,6 +133,7 @@ def PRICE_FEEDS():
     yield {
         "DAI_WETH": config["networks"][network.show_active()]["dai_eth_price_feed"],
         "ETH_USD": config["networks"][network.show_active()]["eth_usd_price_feed"],
+        "USDC_WETH": config["networks"][network.show_active()]["usdc_eth_price_feed"],
     }
 
 
@@ -126,6 +148,14 @@ def eth_usd_price(PRICE_FEEDS):
 @pytest.fixture(scope="module")
 def dai_weth_price(PRICE_FEEDS):
     price_feed = interface.AggregatorV3Interface(PRICE_FEEDS["DAI_WETH"])
+    latest_price = float(web3.fromWei(price_feed.latestRoundData()[1], "ether"))
+    print(latest_price)
+    yield latest_price
+
+
+@pytest.fixture(scope="module")
+def usdc_weth_price(PRICE_FEEDS):
+    price_feed = interface.AggregatorV3Interface(PRICE_FEEDS["USDC_WETH"])
     latest_price = float(web3.fromWei(price_feed.latestRoundData()[1], "ether"))
     print(latest_price)
     yield latest_price
@@ -151,7 +181,7 @@ def get_weth(WETH, main_account, amount):
 def get_weth_1(WETH, account_1):
     """Get weth fixture for account 1"""
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        amount = 80
+        amount = AMOUNT_1
         initial_balance = web3.fromWei(WETH.balanceOf(account_1), "ether")
         if initial_balance < amount:
             tx = WETH.deposit({"from": account_1, "value": amount * (10 ** 18)})
@@ -167,7 +197,7 @@ def create_arbitrage_opportunity(
     """Creates arbitrage opportunity by swapping significant amount of ETH with account 1"""
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         initial_dai_balance = DAI.balanceOf(uniRouter_1.account)
-        amount = web3.toWei(80, "ether")
+        amount = web3.toWei(AMOUNT_1, "ether")
         uniRouter_1.approve_erc20(amount, uniRouter_1.router_v2.address, WETH.address)
         uniRouter_1.swap(WETH.address, DAI.address, dai_weth_price, amount)
         final_dai_balance = DAI.balanceOf(uniRouter_1.account)
@@ -207,6 +237,16 @@ def WETH():
 
 
 @pytest.fixture(scope="module")
+def USDC():
+    yield interface.IERC20(config["networks"][network.show_active()]["usdc"])
+
+
+@pytest.fixture(scope="module")
+def ETH():
+    yield ETH_ADDRESS
+
+
+@pytest.fixture(scope="module")
 def router_sol(main_account):
     yield Router.deploy({"from": main_account})
 
@@ -232,8 +272,8 @@ def flashloan_uni_sushi_weth_dai(
             aave_lending_pool_v2,
             WETH.address,
             DAI.address,
-            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
-            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
+            uni_sushi_arbitrage_obj.dex1.router_v2.address,
+            uni_sushi_arbitrage_obj.dex2.router_v2.address,
             {"from": main_account},
         )
     else:
@@ -247,8 +287,8 @@ def flashloan_uni_sushi_weth_dai(
             aave_lending_pool_v2,
             WETH.address,
             DAI.address,
-            uni_sushi_arbitrage_obj.router_dex2.router_v2.address,
-            uni_sushi_arbitrage_obj.router_dex1.router_v2.address,
+            uni_sushi_arbitrage_obj.dex2.router_v2.address,
+            uni_sushi_arbitrage_obj.dex1.router_v2.address,
             {"from": main_account},
         )
 

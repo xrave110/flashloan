@@ -4,15 +4,15 @@ from brownie import web3, interface
 class Arbitrage:
     def __init__(
         self,
-        router_dex1,
-        router_dex2,
+        dex1,
+        dex2,
         tokenA_address,
         tokenB_address,
         address_tokens_price_feed,
         address_base_token_price_feed,
     ):
-        self.router_dex1 = router_dex1
-        self.router_dex2 = router_dex2
+        self.dex1 = dex1
+        self.dex2 = dex2
         self.tokenA_address = tokenA_address
         self.tokenB_address = tokenB_address
         self.tokenA_symbol = interface.IERC20(tokenA_address).symbol()
@@ -21,18 +21,14 @@ class Arbitrage:
         self.address_base_token_price_feed = address_base_token_price_feed
 
     def check_pools(self):
-        dex1_quote = self.router_dex1.get_pair_quote(
-            self.tokenA_address, self.tokenB_address
-        )
+        dex1_quote = self.dex1.get_pair_quote(self.tokenA_address, self.tokenB_address)
         print("Quote: {}".format(dex1_quote))
         print(
             "Dex1 :\n1 {} is {} {} ".format(
                 self.tokenA_symbol, dex1_quote, self.tokenB_symbol
             )
         )
-        dex2_quote = self.router_dex2.get_pair_quote(
-            self.tokenA_address, self.tokenB_address
-        )
+        dex2_quote = self.dex2.get_pair_quote(self.tokenA_address, self.tokenB_address)
         print("Quote: {}".format(dex2_quote))
         print(
             "Dex2:\n1 {} is {} {} ".format(
@@ -42,18 +38,18 @@ class Arbitrage:
         return [dex1_quote, dex2_quote]
 
     def get_current_balances(self):
-        latest_price = self.router_dex1.get_asset_price(self.address_tokens_price_feed)
-        base_token_price = self.router_dex1.get_asset_price(
+        latest_price = self.dex1.get_asset_price(self.address_tokens_price_feed)
+        base_token_price = self.dex1.get_asset_price(
             self.address_base_token_price_feed
         ) * (
             10 ** 10
         )  # to consider 8 decimals instead of 18
         tokenA_balance = web3.fromWei(
-            interface.IERC20(self.tokenA_address).balanceOf(self.router_dex1.account),
+            interface.IERC20(self.tokenA_address).balanceOf(self.dex1.account),
             "ether",
         )
         tokenB_balance = web3.fromWei(
-            interface.IERC20(self.tokenB_address).balanceOf(self.router_dex1.account),
+            interface.IERC20(self.tokenB_address).balanceOf(self.dex1.account),
             "ether",
         )
         print(
@@ -87,7 +83,7 @@ class Arbitrage:
                 )
             )
             usd_balance = self.buy_cheap(
-                amount, self.router_dex1, self.router_dex2, dex2_quote, dex1_quote
+                amount, self.dex1, self.dex2, dex2_quote, dex1_quote
             )
 
         else:
@@ -97,7 +93,7 @@ class Arbitrage:
                 )
             )
             usd_balance = self.buy_cheap(
-                amount, self.router_dex2, self.router_dex1, dex1_quote, dex2_quote
+                amount, self.dex2, self.dex1, dex1_quote, dex2_quote
             )
         return usd_balance
 
