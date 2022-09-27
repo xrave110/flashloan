@@ -117,7 +117,7 @@ Syntax explanation:
 - `test` phrase also is required in function names in order to be tested by pytest directly.
 - fixtures are passed to the test functions as the arguments, can be used in the body of the function and provides guarancy that all fixture actions before yield keyword has been done.
 
-Once those two files are created and pytest installed according to instructions on the [offcial website](#https://docs.pytest.org/en/7.1.x/#a-quick-example), the tests can be run with following command:
+Once those two files are created and pytest installed according to instructions on the [offcial website](https://docs.pytest.org/en/7.1.x/#a-quick-example), the tests can be run with following command:
 
 `pytest -sv`
 
@@ -304,7 +304,7 @@ It is worth to mention the fact that solidity interface file can contain only su
 from brownie import interface
 erc20 = interface.IERC20(erc20_address)
 ```
-The instances of IERC20, AggregatorV3Interface and IFactory are used in the code in order to get the major function from [Api sheme](#api-scheme) and the main router interface is expected as an argument for the api object. All api class can be viewed <a src=./apis/rounter_v2_api.py>here</a>.
+The instances of IERC20, AggregatorV3Interface and IFactory are used in the code in order to get the major function from [Api sheme](#api-scheme) and the main router interface is expected as an argument for the api object. All api class can be viewed [here](apis/rounter_v2_api.py).
 
 ## Curve_Api class
 
