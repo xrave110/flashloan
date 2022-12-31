@@ -93,6 +93,7 @@ def test_weth_usdc_swap_curve(
     amount = web3.toWei(0.05, "ether")
     swaps_address = curve.provider.get_address(2)
     curve.approve_erc20(amount, swaps_address, WETH.address)
+    print("Swapping {} to {}".format(WETH.address, USDC.address))
     curve.swap(WETH.address, USDC.address, usdc_weth_price, amount)
     final_usdc_balance = USDC.balanceOf(curve.account)
     print(

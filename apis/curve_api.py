@@ -1,5 +1,6 @@
-from brownie import exceptions
-from brownie import Contract, interface, web3
+from brownie import exceptions, convert
+from brownie import Contract, interface, web3, network, config
+import pdb
 
 ASSET_TYPE_MAPPING = {
     "0": "USD",
@@ -25,6 +26,11 @@ class Curve:
             )  # https://curve.readthedocs.io/factory-deployer.html
         )
         self.account = account
+        self.anchor_coins = [
+            config["networks"][network.show_active()]["usdc"],
+            config["networks"][network.show_active()]["weth"],
+            config["networks"][network.show_active()]["usdt"],
+        ]
 
     def approve_erc20(self, amount, to, erc20_address):
         tx_hash = None
@@ -95,7 +101,48 @@ class Curve:
     def _find_pool_with_tokens(
         self, address_from_token, address_to_token, from_to_price, amount
     ):
-        return (0, False)
+        pool_address = self.swaps.get_best_rate(
+            address_to_token, address_from_token, amount
+        )
+        print("_find_pool_with_tokens: {}\n".format(address_from_token))
+        pool_addresses = []
+        # pdb.set_trace()
+        found = bool(convert.to_uint(pool_address[0]))
+        if not found:
+            for anchor_coin in self.anchor_coins:
+                print(
+                    "Checking for pair {}({}) - {}\n".format(
+                        anchor_coin,
+                        interface.IERC20(anchor_coin).symbol(),
+                        address_from_token,
+                    )
+                )
+                pdb.set_trace()
+                pool_address = self.swaps.get_best_rate(
+                    address_from_token, anchor_coin, amount
+                )
+
+                found = bool(convert.to_uint(pool_address[0]))
+                if found == True:
+                    print("Found pair !\n")
+                    pool_addresses.append(pool_address[0])
+                    print(
+                        "Checking for pair {} - {}\n".format(
+                            anchor_coin, address_from_token
+                        )
+                    )
+                    pool_address = self.swaps.get_best_rate(
+                        address_to_token, anchor_coin, amount
+                    )
+                    # pdb.set_trace()
+                    found = bool(convert.to_uint(pool_address[0]))
+                    if found == True:
+                        print("Found pair !\n")
+                        pool_addresses.append(pool_address[0])
+                        break
+
+        print(pool_addresses)
+        return pool_addresses
 
     def swap(
         self,
@@ -106,25 +153,29 @@ class Curve:
         reverse_feed=False,
     ):
         stable_swap = ""
+        pool_addresses = []
         pool_address = self.registry.find_pool_for_coins(
             address_from_token, address_to_token
         )
-        if pool_address == 0x00:
 
-            (pool_address, found) = self._find_pool_with_tokens(
-                address_from_token, address_to_token
+        if convert.to_uint(pool_address) == 0:
+
+            pool_addresses = self._find_pool_with_tokens(
+                address_from_token, address_to_token, from_to_price, amount
             )
-            if not found:
+            if len(pool_addresses) == 0:
                 raise ("Curve__Pool not found")
 
         else:
+            pool_addresses.append(pool_address)
             stable_swap = Contract.from_explorer(pool_address)
         # (pool_address, amount_to) = self.swaps.get_best_rate(
         #     address_from_token, address_to_token, amount
         # )
-        (from_idx, to_idx, exchange_underlying) = self.registry.get_coin_indices(
-            pool_address, address_from_token, address_to_token
-        )
+        for pool_addr in pool_addresses:
+            (from_idx, to_idx, exchange_underlying) = self.registry.get_coin_indices(
+                pool_addr, address_from_token, address_to_token
+            )
         amount_to = stable_swap.get_dy(from_idx, to_idx, amount)
         if reverse_feed:
             from_to_price = 1 / from_to_price
@@ -163,7 +214,7 @@ class Curve:
             )
         swap_tx.wait(1)
 
-    def get_pair_quote(self, address_token_a, address_token_b, amount=10 ** 18):
+    def get_pair_quote(self, address_token_a, address_token_b, amount=10**18):
         (pool_address, amount_to) = self.swaps.get_best_rate(
             address_token_a, address_token_b, amount
         )
